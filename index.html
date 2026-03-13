@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Test</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #0f1523;
+      color: #f1f5f9;
+      min-height: 100vh;
+    }
+
+    /* LOADER */
+    #loader {
+      position: fixed; inset: 0; background: #0f1523;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px; z-index: 999;
+    }
+    .loader-ring {
+      width: 44px; height: 44px;
+      border: 3px solid #1e2d45; border-top-color: #3b82f6;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    .loader-txt { color: #64748b; font-size: 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* SCREENS */
+    #test-screen   { display: none; }
+    #result-screen { display: none; }
+
+    /* HEADER */
+    .hdr {
+      background: #111827;
+      border-bottom: 1px solid #1e2d45;
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .hdr-info h2 { font-size: 15px; font-weight: 700; }
+    .hdr-info p  { font-size: 11px; color: #64748b; margin-top: 1px; }
+    .hdr-score {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: white; font-size: 13px; font-weight: 700;
+      padding: 5px 12px; border-radius: 20px;
+    }
+
+    /* PROGRESS */
+    .prg { padding: 12px 16px 8px; }
+    .prg-row {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: #94a3b8; margin-bottom: 6px;
+    }
+    .prg-row span:last-child { color: #3b82f6; font-weight: 700; }
+    .prg-track { height: 4px; background: #1e2d45; border-radius: 4px; }
+    .prg-fill  {
+      height: 4px; border-radius: 4px;
+      background: linear-gradient(90deg, #3b82f6, #6366f1);
+      transition: width 0.4s ease;
+    }
+
+    /* QUESTION */
+    .qcard {
+      margin: 10px 16px;
+      background: #111827;
+      border: 1px solid #1e2d45;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .qnum {
+      font-size: 11px; font-weight: 700; color: #3b82f6;
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+    }
+    .qtxt { font-size: 16px; font-weight: 600; line-height: 1.55; }
+    .qimg {
+      width: 100%; border-radius: 10px; margin-bottom: 12px;
+      max-height: 160px; object-fit: cover;
+    }
+
+    /* OPTIONS */
+    .opts { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .opt {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 14px;
+      background: #111827; border: 1.5px solid #1e2d45;
+      border-radius: 13px; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .opt:active { transform: scale(0.98); }
+    .opt-ltr {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #1a2235; border: 1.5px solid #1e2d45;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #94a3b8;
+      flex-shrink: 0;
+    }
+    .opt-txt { font-size: 15px; font-weight: 500; line-height: 1.4; }
+
+    .opt.correct { border-color: #10b981; background: rgba(16,185,129,0.1); }
+    .opt.correct .opt-ltr { background: #10b981; border-color: #10b981; color: white; }
+    .opt.wrong   { border-color: #f43f5e; background: rgba(244,63,94,0.1); }
+    .opt.wrong   .opt-ltr { background: #f43f5e; border-color: #f43f5e; color: white; }
+    .opt.hint    { border-color: #10b981; background: rgba(16,185,129,0.06); }
+    .opt.hint    .opt-ltr { background: #10b981; border-color: #10b981; color: white; }
+    .opt.off     { pointer-events: none; opacity: 0.4; }
+
+    /* FEEDBACK */
+    .fb {
+      margin: 10px 16px 0; padding: 10px 14px;
+      border-radius: 11px; font-size: 13px; font-weight: 600;
+      display: none; align-items: center; gap: 8px;
+    }
+    .fb.ok  { display: flex; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; }
+    .fb.err { display: flex; background: rgba(244,63,94,0.12);  border: 1px solid rgba(244,63,94,0.3);  color: #f43f5e; }
+
+    /* ACTIONS */
+    .acts { padding: 10px 16px; display: flex; gap: 8px; }
+    .btn {
+      flex: 1; padding: 13px; border: none; border-radius: 12px;
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+      cursor: pointer;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-skip { background: transparent; color: #f59e0b; border: 1.5px solid rgba(245,158,11,0.3); flex: none; padding: 13px 18px; }
+    .btn-next { background: linear-gradient(135deg,#3b82f6,#6366f1); color: white; }
+    .btn-end  { background: linear-gradient(135deg,#10b981,#059669); color: white; }
+
+    /* GRID */
+    .gbox { padding: 12px 16px 80px; border-top: 1px solid #1e2d45; margin-top: 10px; }
+    .glbl { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 7px; }
+    .gbtn {
+      width: 36px; height: 36px; border-radius: 9px;
+      border: 1.5px solid #1e2d45; background: #111827;
+      color: #64748b; font-size: 12px; font-weight: 700;
+      cursor: pointer;
+    }
+    .gbtn.cur { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.1); }
+    .gbtn.ok  { background: #10b981; border-color: #10b981; color: white; }
+    .gbtn.err { background: #f43f5e; border-color: #f43f5e; color: white; }
+    .gbtn.skp { background: #f59e0b; border-color: #f59e0b; color: white; }
+
+    /* RESULT */
+    #result-screen {
+      flex-direction: column; align-items: center;
+      padding: 32px 16px 40px;
+    }
+    .r-emoji { font-size: 60px; margin-bottom: 8px; }
+    .r-grade { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .r-score {
+      font-size: 52px; font-weight: 900;
+      background: linear-gradient(135deg,#3b82f6,#6366f1);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 24px;
+    }
+    .r-stats { display: flex; gap: 10px; width: 100%; margin-bottom: 16px; }
+    .r-stat  {
+      flex: 1; background: #111827; border: 1px solid #1e2d45;
+      border-radius: 13px; padding: 14px 8px; text-align: center;
+    }
+    .r-val { font-size: 26px; font-weight: 900; }
+    .r-lbl { font-size: 11px; color: #64748b; margin-top: 3px; }
+    .r-stat.ok .r-val  { color: #10b981; }
+    .r-stat.err .r-val { color: #f43f5e; }
+    .r-stat.skp .r-val { color: #f59e0b; }
+
+    .r-gbox { width: 100%; background: #111827; border: 1px solid #1e2d45; border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+    .r-glbl { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+
+    .btn-send {
+      width: 100%; padding: 15px; border: none; border-radius: 14px;
+      background: linear-gradient(135deg,#3b82f6,#6366f1);
+      color: white; font-family: 'Outfit', sans-serif;
+      font-size: 15px; font-weight: 800; cursor: pointer;
+    }
+    .btn-send:active { opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="loader-ring"></div>
+  <div class="loader-txt">Savollar yuklanmoqda...</div>
+</div>
+
+<div id="test-screen">
+  <div class="hdr">
+    <div class="hdr-info">
+      <h2 id="hdr-title">📚 Test</h2>
+      <p  id="hdr-sub">Yuklanmoqda...</p>
+    </div>
+    <div class="hdr-score" id="hdr-score">0 ball</div>
+  </div>
+
+  <div class="prg">
+    <div class="prg-row">
+      <span id="prg-label">1 / 35</span>
+      <span id="prg-pct">3%</span>
+    </div>
+    <div class="prg-track">
+      <div class="prg-fill" id="prg-fill" style="width:3%"></div>
+    </div>
+  </div>
+
+  <div class="qcard">
+    <img id="qimg" class="qimg" style="display:none" alt="">
+    <div class="qnum" id="qnum">SAVOL 1</div>
+    <div class="qtxt" id="qtxt">Yuklanmoqda...</div>
+  </div>
+
+  <div class="opts" id="opts"></div>
+
+  <div class="fb" id="fb"></div>
+
+  <div class="acts">
+    <button class="btn btn-skip" id="btn-skip" onclick="skipQuestion()">⏭ O'tkazish</button>
+    <button class="btn btn-next" id="btn-next" onclick="nextQuestion()" style="display:none">Keyingi →</button>
+    <button class="btn btn-end"  id="btn-finish"  onclick="showResult()" style="display:none">✅ Yakunlash</button>
+  </div>
+
+  <div class="gbox">
+    <div class="glbl">Savollar paneli</div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<div id="result-screen">
+  <div class="r-emoji" id="r-emoji">🏆</div>
+  <div class="r-grade" id="r-grade">Ajoyib!</div>
+  <div class="r-score" id="r-score">0%</div>
+
+  <div class="r-stats">
+    <div class="r-stat ok">
+      <div class="r-val" id="r-correct">0</div>
+      <div class="r-lbl">✅ To'g'ri</div>
+    </div>
+    <div class="r-stat err">
+      <div class="r-val" id="r-wrong">0</div>
+      <div class="r-lbl">❌ Xato</div>
+    </div>
+    <div class="r-stat skp">
+      <div class="r-val" id="r-skip">0</div>
+      <div class="r-lbl">⏭ O'tkazildi</div>
+    </div>
+  </div>
+
+  <div class="r-gbox">
+    <div class="r-glbl">Har bir savol natijasi</div>
+    <div class="grid" id="result-grid"></div>
+  </div>
+
+  <button class="btn-send" onclick="sendResult()">📤 Natijani yuborish</button>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>

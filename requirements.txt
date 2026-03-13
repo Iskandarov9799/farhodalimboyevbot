@@ -1,0 +1,20 @@
+# Bot
+aiogram==3.13.1
+aiohttp==3.10.10
+
+# Database — PostgreSQL (production)
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# Database — SQLite (faqat local dev uchun fallback)
+aiosqlite==0.20.0
+
+# Config
+python-dotenv==1.0.1
+pydantic==2.9.2
+pydantic-core==2.23.4
+
+# Utils
+openpyxl==3.1.5
+greenlet
