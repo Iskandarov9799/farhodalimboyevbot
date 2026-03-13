@@ -58,6 +58,7 @@ def skip_image_keyboard():
 # ── Biologiya inline ────────────────────────────────
 
 def biologiya_category_keyboard():
+    """Asosiy kategoriya — Orqaga yo'q (bu birinchi sahifa)"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📌 Mavzulashtirilgan", callback_data="biologiya:cat:mavzu")],
         [InlineKeyboardButton(text="🏫 Sinflar bo'yicha",  callback_data="biologiya:cat:sinf")],
@@ -66,12 +67,15 @@ def biologiya_category_keyboard():
     ])
 
 def biologiya_topics_keyboard():
+    """Mavzu tanlash — Orqaga: kategoriya"""
     buttons = []
     for key, label in config.BIOLOGIYA_TOPICS.items():
         buttons.append([InlineKeyboardButton(text=label, callback_data=f"biologiya:topic:{key}")])
+    buttons.append([InlineKeyboardButton(text="🔙 Orqaga", callback_data="biologiya:back:category")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def grades_keyboard(subject='biologiya'):
+    """Sinf tanlash — Orqaga: kategoriya"""
     buttons = []
     row = []
     for key, label in config.GRADES.items():
@@ -79,14 +83,25 @@ def grades_keyboard(subject='biologiya'):
         if len(row) == 2:
             buttons.append(row); row = []
     if row: buttons.append(row)
+    buttons.append([InlineKeyboardButton(text="🔙 Orqaga", callback_data=f"{subject}:back:category")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def difficulty_keyboard(subject='biologiya', category='aralash', subcategory=None):
+    """Qiyinlik tanlash — Orqaga: mavzu yoki sinf yoki kategoriya"""
     sub = subcategory or ''
+    # Orqaga qayerga borishni aniqlash
+    if category == 'mavzu':
+        back_cb = f"{subject}:back:topics"
+    elif category == 'sinf':
+        back_cb = f"{subject}:back:grades"
+    else:
+        back_cb = f"{subject}:back:category"
+
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🟢 Oson",  callback_data=f"{subject}:diff:{category}:{sub}:easy")],
         [InlineKeyboardButton(text="🟡 O'rta", callback_data=f"{subject}:diff:{category}:{sub}:medium")],
         [InlineKeyboardButton(text="🔴 Qiyin", callback_data=f"{subject}:diff:{category}:{sub}:hard")],
+        [InlineKeyboardButton(text="🔙 Orqaga", callback_data=back_cb)],
     ])
 
 def miniapp_keyboard(url: str):
@@ -109,7 +124,7 @@ def attestation_buy_keyboard(subject: str):
             text=f"💳 {config.PRICE_ATTESTATION:,} so'm to'lash",
             callback_data=f"payment:attestation:{subject}"
         )],
-        [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="payment:cancel")],
+        [InlineKeyboardButton(text="🔙 Orqaga", callback_data=f"{subject}:back:category")],
     ])
 
 def attestation_format_keyboard():
@@ -117,6 +132,12 @@ def attestation_format_keyboard():
         [InlineKeyboardButton(text="📱 Mini App", callback_data="attest:format:miniapp")],
         [InlineKeyboardButton(text="📄 PDF",      callback_data="attest:format:pdf")],
     ])
+
+def payment_confirm_keyboard(purchase_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"confirm_pay:{purchase_id}"),
+        InlineKeyboardButton(text="❌ Rad etish",  callback_data=f"reject_pay:{purchase_id}"),
+    ]])
 
 # ── Savol qo'shish ─────────────────────────────────
 

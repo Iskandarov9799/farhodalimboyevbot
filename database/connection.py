@@ -1,19 +1,28 @@
 import ssl
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from database.models import Base
 
-def _build_url(raw: str) -> str:
+
+def _clean_url(raw: str) -> str:
+    """postgres:// → postgresql+asyncpg://, asyncpg qabul qilmaydigan parametrlarni olib tashlash"""
     if raw.startswith("postgres://"):
-        return raw.replace("postgres://", "postgresql+asyncpg://", 1)
-    if raw.startswith("postgresql://"):
-        return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return raw
+        raw = raw.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif raw.startswith("postgresql://"):
+        raw = raw.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    parsed = urlparse(raw)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    remove_keys = {'sslmode', 'ssl', 'channel_binding', 'connect_timeout', 'application_name'}
+    cleaned = {k: v for k, v in params.items() if k not in remove_keys}
+    new_query = urlencode(cleaned, doseq=True)
+    return urlunparse(parsed._replace(query=new_query))
+
 
 def _make_engine(url: str):
     if url.startswith("sqlite"):
         return create_async_engine(url, echo=False)
 
-    # Lokal PostgreSQL uchun SSL kerak emas
     is_local = "localhost" in url or "127.0.0.1" in url
     connect_args = {} if is_local else {"ssl": ssl.create_default_context()}
 
@@ -26,13 +35,15 @@ def _make_engine(url: str):
         connect_args=connect_args,
     )
 
+
 _engine           = None
 AsyncSessionLocal = None
+
 
 def init_engine():
     global _engine, AsyncSessionLocal
     from config import config
-    url     = _build_url(config.DATABASE_URL)
+    url     = _clean_url(config.DATABASE_URL)
     _engine = _make_engine(url)
     AsyncSessionLocal = async_sessionmaker(
         _engine,
@@ -40,6 +51,7 @@ def init_engine():
         expire_on_commit=False,
     )
     return _engine
+
 
 async def init_db():
     engine = _engine or init_engine()

@@ -1,9 +1,11 @@
 import asyncio
 import os
+import re
 import ssl
 from logging.config import fileConfig
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 from dotenv import load_dotenv
 
@@ -13,12 +15,27 @@ from database.models import Base
 
 config = context.config
 
-# .env dan DATABASE_URL olish va asyncpg formatiga o'tkazish
 db_url = os.getenv("DATABASE_URL", "")
+
+# postgres:// → postgresql+asyncpg://
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 elif db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# URL dan asyncpg qabul qilmaydigan parametrlarni olib tashlash
+def clean_db_url(url: str) -> str:
+    parsed = urlparse(url)
+    # query parametrlarni parse qilish
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    # olib tashlanadigan parametrlar
+    remove_keys = {'sslmode', 'ssl', 'channel_binding', 'connect_timeout', 'application_name'}
+    cleaned = {k: v for k, v in params.items() if k not in remove_keys}
+    new_query = urlencode(cleaned, doseq=True)
+    cleaned_url = urlunparse(parsed._replace(query=new_query))
+    return cleaned_url
+
+db_url = clean_db_url(db_url)
 
 config.set_main_option("sqlalchemy.url", db_url)
 
@@ -43,7 +60,6 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations():
-    # Lokal PostgreSQL uchun SSL kerak emas
     is_local = "localhost" in db_url or "127.0.0.1" in db_url
     connect_args = {} if is_local else {"ssl": ssl.create_default_context()}
 

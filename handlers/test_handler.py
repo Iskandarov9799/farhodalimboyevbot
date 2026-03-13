@@ -28,16 +28,9 @@ def encode_questions(q_list: list, meta: dict = None) -> str:
 
 def questions_to_miniapp(questions: list) -> list:
     return [
-        {
-            "id":  q.id,
-            "t":   q.question_text,
-            "a":   q.option_a,
-            "b":   q.option_b,
-            "c":   q.option_c,
-            "d":   q.option_d,
-            "ok":  q.correct_answer,
-            "img": q.image_file_id or ""
-        }
+        {"id": q.id, "t": q.question_text, "a": q.option_a,
+         "b": q.option_b, "c": q.option_c, "d": q.option_d,
+         "ok": q.correct_answer, "img": q.image_file_id or ""}
         for q in questions
     ]
 
@@ -104,12 +97,9 @@ async def launch_miniapp(callback: CallbackQuery, tid: int,
         await mark_free_used(tid, access_key)
 
     meta = {
-        'subject':        subject,
-        'category':       category,
-        'subcategory':    subcategory,
-        'difficulty':     difficulty,
-        'is_attestation': is_attestation,
-        'solution_url':   config.SOLUTION_URL,
+        'subject': subject, 'category': category,
+        'subcategory': subcategory, 'difficulty': difficulty,
+        'is_attestation': is_attestation, 'solution_url': config.SOLUTION_URL,
     }
 
     encoded = encode_questions(questions_to_miniapp(questions), meta)
@@ -117,21 +107,20 @@ async def launch_miniapp(callback: CallbackQuery, tid: int,
 
     DIFF  = {'easy': '🟢 Oson', 'medium': "🟡 O'rta", 'hard': '🔴 Qiyin'}
     TOPIC = config.BIOLOGIYA_TOPICS
-
     diff_label = DIFF.get(difficulty, '') if difficulty else ''
     sub_label  = TOPIC.get(subcategory, subcategory) if subcategory else (subcategory or '')
 
     await callback.message.answer(
         f"🧬 <b>Biologiya</b> — <b>{sub_label or category}</b>"
         f"{' · ' + diff_label if diff_label else ''}\n\n"
-        f"📝 Savollar soni: <b>{len(questions)} ta</b>\n\n"
-        f"Testni boshlashga tayyor bo'lsangiz, tugmani bosing 👇",
-        reply_markup=miniapp_keyboard(url),
-        parse_mode="HTML"
+        f"📝 Savollar soni: <b>{len(questions)} ta</b>\n\nTestni boshlashga tayyor bo'lsangiz, tugmani bosing 👇",
+        reply_markup=miniapp_keyboard(url), parse_mode="HTML"
     )
     await callback.answer()
 
-# ── Asosiy handler ──────────────────────────────────
+# ══════════════════════════════════════════════
+# ASOSIY HANDLER
+# ══════════════════════════════════════════════
 
 @router.message(F.text == "🧬 Biologiya")
 async def biologiya_menu(message: Message, state: FSMContext):
@@ -140,9 +129,40 @@ async def biologiya_menu(message: Message, state: FSMContext):
         return
     await message.answer(
         "🧬 <b>Biologiya</b>\n\nQaysi turdagi testni ishlaysiz?",
-        reply_markup=biologiya_category_keyboard(),
-        parse_mode="HTML"
+        reply_markup=biologiya_category_keyboard(), parse_mode="HTML"
     )
+
+# ══════════════════════════════════════════════
+# ORQAGA — BACK HANDLERS
+# ══════════════════════════════════════════════
+
+@router.callback_query(F.data == "biologiya:back:category")
+async def back_to_category(callback: CallbackQuery):
+    await safe_edit(callback,
+        "🧬 <b>Biologiya</b>\n\nQaysi turdagi testni ishlaysiz?",
+        reply_markup=biologiya_category_keyboard()
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "biologiya:back:topics")
+async def back_to_topics(callback: CallbackQuery):
+    await safe_edit(callback,
+        "📌 <b>Mavzuni tanlang:</b>",
+        reply_markup=biologiya_topics_keyboard()
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "biologiya:back:grades")
+async def back_to_grades(callback: CallbackQuery):
+    await safe_edit(callback,
+        "🏫 <b>Sinfni tanlang:</b>",
+        reply_markup=grades_keyboard('biologiya')
+    )
+    await callback.answer()
+
+# ══════════════════════════════════════════════
+# KATEGORIYA
+# ══════════════════════════════════════════════
 
 @router.callback_query(F.data.startswith("biologiya:cat:"))
 async def biologiya_category(callback: CallbackQuery, state: FSMContext):
@@ -171,6 +191,10 @@ async def biologiya_category(callback: CallbackQuery, state: FSMContext):
             return
     await callback.answer()
 
+# ══════════════════════════════════════════════
+# MAVZU → QIYINLIK
+# ══════════════════════════════════════════════
+
 @router.callback_query(F.data.regexp(r'^biologiya:topic:[^:]+$'))
 async def biologiya_topic(callback: CallbackQuery, state: FSMContext):
     topic = callback.data.split(":")[2]
@@ -180,6 +204,10 @@ async def biologiya_topic(callback: CallbackQuery, state: FSMContext):
         reply_markup=difficulty_keyboard('biologiya', 'mavzu', topic)
     )
     await callback.answer()
+
+# ══════════════════════════════════════════════
+# SINF → QIYINLIK
+# ══════════════════════════════════════════════
 
 @router.callback_query(F.data.regexp(r'^biologiya:grade:\d+$'))
 async def biologiya_grade(callback: CallbackQuery, state: FSMContext):
@@ -191,6 +219,10 @@ async def biologiya_grade(callback: CallbackQuery, state: FSMContext):
     )
     await callback.answer()
 
+# ══════════════════════════════════════════════
+# QIYINLIK → MINIAPP
+# ══════════════════════════════════════════════
+
 @router.callback_query(F.data.startswith("biologiya:diff:"))
 async def biologiya_difficulty(callback: CallbackQuery, state: FSMContext):
     parts = callback.data.split(":")
@@ -201,7 +233,9 @@ async def biologiya_difficulty(callback: CallbackQuery, state: FSMContext):
                          subject='biologiya', category=category,
                          subcategory=subcategory, difficulty=difficulty)
 
-# ── Atestatsiya ─────────────────────────────────────
+# ══════════════════════════════════════════════
+# ATESTATSIYA
+# ══════════════════════════════════════════════
 
 @router.message(F.text == "🎓 Atestatsiya")
 async def attestation_menu(message: Message):
@@ -216,8 +250,7 @@ async def attestation_menu(message: Message):
             await message.answer("❌ Atestatsiya savollari hali qo'shilmagan.")
             return
         questions = await get_questions(
-            subject='biologiya', is_attestation=True,
-            count=config.ATTESTATION_COUNT
+            subject='biologiya', is_attestation=True, count=config.ATTESTATION_COUNT
         )
         meta = {
             'subject': 'biologiya', 'category': 'attestation',
@@ -231,44 +264,34 @@ async def attestation_menu(message: Message):
         )
     else:
         await message.answer(
-            f"🎓 <b>Atestatsiya testi</b>\n\n"
-            f"Bu test bir martalik sotib olinadi.\n"
+            f"🎓 <b>Atestatsiya testi</b>\n\nBu test bir martalik sotib olinadi.\n"
             f"💰 Narxi: <b>{config.PRICE_ATTESTATION:,} so'm</b>",
-            reply_markup=attestation_buy_keyboard('biologiya'),
-            parse_mode="HTML"
+            reply_markup=attestation_buy_keyboard('biologiya'), parse_mode="HTML"
         )
 
-# ── Mini App natijasi ───────────────────────────────
+# ══════════════════════════════════════════════
+# MINI APP NATIJA
+# ══════════════════════════════════════════════
 
 @router.message(F.web_app_data)
 async def webapp_result(message: Message):
     try:
         data = json.loads(message.web_app_data.data)
         tid  = message.from_user.id
-
         await save_test_result(
-            telegram_id    = tid,
-            subject        = data.get('subject', 'biologiya'),
-            category       = data.get('category', 'aralash'),
-            subcategory    = data.get('subcategory'),
-            difficulty     = data.get('difficulty'),
-            is_attestation = data.get('is_attestation', False),
-            total          = data.get('total', 0),
-            correct        = data.get('correct', 0),
-            wrong          = data.get('wrong', 0),
-            skipped        = data.get('skip', 0),
-            score          = data.get('score', 0),
+            telegram_id=tid, subject=data.get('subject', 'biologiya'),
+            category=data.get('category', 'aralash'), subcategory=data.get('subcategory'),
+            difficulty=data.get('difficulty'), is_attestation=data.get('is_attestation', False),
+            total=data.get('total', 0), correct=data.get('correct', 0),
+            wrong=data.get('wrong', 0), skipped=data.get('skip', 0), score=data.get('score', 0),
         )
-
         pct = data.get('score', 0)
         correct = data.get('correct', 0)
         total   = data.get('total', 0)
-
         if pct >= 90:   emoji, baho = "🏆", "A'lo (5)"
         elif pct >= 70: emoji, baho = "🎉", "Yaxshi (4)"
         elif pct >= 50: emoji, baho = "📚", "Qoniqarli (3)"
         else:           emoji, baho = "😔", "Qoniqarsiz (2)"
-
         await message.answer(
             f"{emoji} <b>Test yakunlandi!</b>\n\n"
             f"✅ To'g'ri: <b>{correct}</b> / {total}\n"
