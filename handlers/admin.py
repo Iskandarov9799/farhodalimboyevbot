@@ -171,7 +171,7 @@ from aiogram.types import CallbackQuery
 async def addq_subject(callback: CallbackQuery, state: FSMContext):
     subject = callback.data.split(":")[2]
     await state.update_data(subject=subject)
-    SUBJ = {'onatili': '📚 Ona tili', 'adabiyot': '📖 Adabiyot'}
+    SUBJ = {'biologiya': '🧬 Biologiya'}
     await callback.message.edit_text(
         f"📁 <b>{SUBJ.get(subject)} — Kategoriya tanlang:</b>",
         reply_markup=addq_category_keyboard(subject),
@@ -218,7 +218,7 @@ async def addq_category(callback: CallbackQuery, state: FSMContext):
         await state.set_state(AdminStates.add_order_num)
 
     else:
-        # aralash, gazallar — qiyinlik kerak
+        # aralash — qiyinlik kerak
         await callback.message.edit_text(
             "🎯 <b>Qiyinlik darajasini tanlang:</b>",
             reply_markup=addq_difficulty_keyboard(),
@@ -233,7 +233,7 @@ async def addq_category(callback: CallbackQuery, state: FSMContext):
 async def addq_topic(callback: CallbackQuery, state: FSMContext):
     topic = callback.data.split(":")[2]
     await state.update_data(subcategory=topic, is_attestation=False)
-    label = config.ONA_TILI_TOPICS.get(topic, topic)
+    label = config.BIOLOGIYA_TOPICS.get(topic, topic)
     await callback.message.edit_text(
         f"📌 <b>{label}</b>\n\nQiyinlik darajasini tanlang:",
         reply_markup=addq_difficulty_keyboard(),
@@ -367,7 +367,7 @@ async def addq_correct(callback: CallbackQuery, state: FSMContext):
         image_file_id  = data.get('image_file_id'),
     )
 
-    SUBJ = {'onatili': '📚 Ona tili', 'adabiyot': '📖 Adabiyot'}
+    SUBJ = {'biologiya': '🧬 Biologiya'}
     await callback.message.edit_text(
         f"✅ <b>Savol muvaffaqiyatli qo'shildi!</b>\n\n"
         f"📚 Fan: {SUBJ.get(data['subject'])}\n"
@@ -486,11 +486,11 @@ async def excel_import_start(message: Message):
 
     # Misol qatorlar
     examples = [
-        ["onatili", "mavzu", "fonetika", "easy",   "FALSE", "", "O'zbek tilida nechta unli tovush bor?", "5 ta", "6 ta", "7 ta", "8 ta", "B"],
-        ["onatili", "aralash", "", "medium",         "FALSE", "", "Sinonimlarga misol:", "katta-kichik", "baland-past", "go'zal-chiroyli", "tez-sekin", "C"],
-        ["adabiyot", "sinf", "7", "hard",            "FALSE", "", "Navoiy qaysi asrda yashagan?", "XIV", "XV", "XVI", "XVII", "B"],
-        ["adabiyot", "gazallar", "", "easy",         "FALSE", "", "G'azal necha misradan iborat?", "4", "6", "8", "10", "C"],
-        ["onatili", "attestation", "", "",           "TRUE",  "1", "Fonetika nima?", "So'z haqidagi fan", "Tovush haqidagi fan", "Gap haqidagi fan", "Harf haqidagi fan", "B"],
+        ["biologiya", "mavzu", "hujayra",   "easy",   "FALSE", "", "Hujayraning asosiy tarkibiy qismi?", "Membrana", "Yadro", "Sitoplazma", "Ribosoma", "B"],
+        ["biologiya", "mavzu", "genetika",  "medium", "FALSE", "", "DNK ning to'liq nomi?", "Dezoksiribonuklein kislota", "Ribonuklein kislota", "Adenozintrifosfat", "Aminokislota", "A"],
+        ["biologiya", "sinf",  "9",         "hard",   "FALSE", "", "Evolyutsiya nazariyasini kim yaratgan?", "Mendel", "Pasteur", "Darvin", "Linney", "C"],
+        ["biologiya", "aralash", "",        "easy",   "FALSE", "", "Eng kichik tirik organizm?", "Bakteriya", "Virus", "Zamburug'", "O't o'simlik", "B"],
+        ["biologiya", "attestation", "", "", "TRUE",  "1",    "Fotosintez qaysi organoidda boradi?", "Mitoxondriya", "Xloroplast", "Ribosoma", "Lizosoma", "B"],
     ]
     for row in examples:
         ws.append(row)
@@ -500,9 +500,9 @@ async def excel_import_start(message: Message):
     ws2.column_dimensions['A'].width = 20
     ws2.column_dimensions['B'].width = 50
     guide = [
-        ("subject",        "onatili | adabiyot"),
-        ("category",       "mavzu | aralash | sinf | gazallar | attestation"),
-        ("subcategory",    "mavzu uchun: fonetika, leksika, morfologiya, sintaksis, imlo, uslubiyat\nsinf uchun: 5, 6, 7, 8, 9, 10, 11\nboshqalar uchun: bo'sh"),
+        ("subject",        "biologiya"),
+        ("category",       "mavzu | aralash | sinf | attestation"),
+        ("subcategory",    "mavzu uchun: hujayra, genetika, evolyutsiya, botanika, zoologiya, anatomiya, ekologiya, mikrobiologiya\nsinf uchun: 6, 7, 8, 9, 10, 11\nboshqalar uchun: bo'sh"),
         ("difficulty",     "easy | medium | hard  (attestation uchun bo'sh)"),
         ("is_attestation", "TRUE | FALSE"),
         ("order_num",      "Faqat attestation uchun tartib raqami (1, 2, 3...), boshqalar uchun bo'sh"),
@@ -553,8 +553,8 @@ async def excel_import_upload(message: Message):
     wb = openpyxl.load_workbook(buf)
     ws = wb.active
 
-    VALID_SUBJECTS    = {'onatili', 'adabiyot'}
-    VALID_CATEGORIES  = {'mavzu', 'aralash', 'sinf', 'gazallar', 'attestation'}
+    VALID_SUBJECTS    = {'biologiya'}
+    VALID_CATEGORIES  = {'mavzu', 'aralash', 'sinf', 'attestation'}
     VALID_DIFFICULTIES= {'easy', 'medium', 'hard', ''}
     VALID_CORRECT     = {'A', 'B', 'C', 'D'}
 
